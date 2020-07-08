@@ -8,7 +8,7 @@ import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 
-class KafkaStream(private val jsonValidator: JsonValidator) {
+class KafkaStream(private val jsonValidator: JsonValidator) extends java.io.Serializable {
   def run = {
     val conf = new SparkConf()
       .setAppName("KakfaConsumer")
@@ -40,6 +40,7 @@ class KafkaStream(private val jsonValidator: JsonValidator) {
       .map(record => record.value)
     filteredOnlyJson.foreachRDD(rdd => {
       val jsonDataFrame = spark.read.json(rdd.toDS())
+      jsonDataFrame.printSchema()
     })
 
     streamingContext.start()
@@ -50,5 +51,6 @@ class KafkaStream(private val jsonValidator: JsonValidator) {
 object KafkaStream {
   def main(args: Array[String]): Unit = {
     val streamExec = new KafkaStream(Utils)
+    streamExec.run
   }
 }
