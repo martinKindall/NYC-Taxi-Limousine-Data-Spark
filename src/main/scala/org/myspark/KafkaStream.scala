@@ -2,19 +2,22 @@ package org.myspark
 
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 
-
-object KafkaStream {
-  def main(args: Array[String]): Unit = {
+class KafkaStream(private val jsonValidator: JsonValidator) {
+  def run = {
     val conf = new SparkConf()
       .setAppName("KakfaConsumer")
       .set("spark.local.dir", "C:\\tmp\\hive")
-      //.setMaster("local")   // do not set when using submit-job
+    //.setMaster("local")   // do not set when using submit-job
     val streamingContext = new StreamingContext(conf, Seconds(1))
+    val spark  = SparkSession.builder()
+      .getOrCreate()
+    import spark.implicits._
 
     val kafkaParams = Map[String, Object](
       "bootstrap.servers" -> "localhost:9092",
@@ -32,9 +35,20 @@ object KafkaStream {
       Subscribe[String, String](topics, kafkaParams)
     )
 
-    stream.foreachRDD(rdd => if (!rdd.isEmpty()) rdd.foreach(record => println(record.value)))
+    val filteredOnlyJson = stream
+      .filter(record => jsonValidator.isValidRawJson(record.value))
+      .map(record => record.value)
+    filteredOnlyJson.foreachRDD(rdd => {
+      val jsonDataFrame = spark.read.json(rdd.toDS())
+    })
 
     streamingContext.start()
     streamingContext.awaitTermination()
+  }
+}
+
+object KafkaStream {
+  def main(args: Array[String]): Unit = {
+    val streamExec = new KafkaStream(Utils)
   }
 }
