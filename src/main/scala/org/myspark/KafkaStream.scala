@@ -8,6 +8,7 @@ import org.apache.spark.streaming._
 import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
+import play.api.libs.json.Json
 
 class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
   def run = {
@@ -49,7 +50,11 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
 
     val filteredOnlyJson = stream
       .filter(record => record.value != null && jsonValidator.isValidRawJson(record.value))
-      .map(record => ("1", record.value))
+      .map(record => {
+        val jsonValue = jsonValidator.parse(record.value)
+        val taxiResult = jsonValidator.toStructure(jsonValue)
+        ("1", record.value)
+      })
       .reduceByKeyAndWindow((a: String, b: String) => {
         a+b
       }, Seconds(5), Seconds(5))
