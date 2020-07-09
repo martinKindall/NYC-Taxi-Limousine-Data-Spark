@@ -3,12 +3,13 @@ package org.myspark
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 
-class KafkaStream(private val jsonValidator: JsonValidator) extends java.io.Serializable {
+class KafkaStream extends java.io.Serializable {
   def run = {
     val conf = new SparkConf()
       .setAppName("KakfaConsumer")
@@ -35,12 +36,25 @@ class KafkaStream(private val jsonValidator: JsonValidator) extends java.io.Seri
       Subscribe[String, String](topics, kafkaParams)
     )
 
+    val taxiDataSchema = new StructType()
+      .add("ride_id", StringType, nullable = true)
+      .add("point_idx", IntegerType, nullable = true)
+      .add("latitude", FloatType, nullable = true)
+      .add("longitude", FloatType, nullable = true)
+      .add("timestamp", TimestampType, nullable = true)
+      .add("meter_reading", FloatType, nullable = true)
+      .add("meter_increment", FloatType, nullable = true)
+      .add("ride_status", StringType, nullable = true)
+      .add("passenger_count", IntegerType, nullable = true)
+
     val filteredOnlyJson = stream
-      .filter(record => jsonValidator.isValidRawJson(record.value))
       .map(record => record.value)
     filteredOnlyJson.foreachRDD(rdd => {
-      val jsonDataFrame = spark.read.json(rdd.toDS())
-      jsonDataFrame.printSchema()
+      val jsonDataFrame = spark.read.schema(taxiDataSchema).json(rdd.toDS())
+      val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
+      filteredNullsDF.foreach(row => {
+        println(row.json)
+      })
     })
 
     streamingContext.start()
@@ -50,7 +64,7 @@ class KafkaStream(private val jsonValidator: JsonValidator) extends java.io.Seri
 
 object KafkaStream {
   def main(args: Array[String]): Unit = {
-    val streamExec = new KafkaStream(Utils)
+    val streamExec = new KafkaStream
     streamExec.run
   }
 }
