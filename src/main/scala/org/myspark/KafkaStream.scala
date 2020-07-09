@@ -49,10 +49,11 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
 
     val filteredOnlyJson = stream
       .filter(record => record.value != null && jsonValidator.isValidRawJson(record.value))
-      .map(record => record.value)
-      .reduceByWindow((a: String, b: String) => {
+      .map(record => ("1", record.value))
+      .reduceByKeyAndWindow((a: String, b: String) => {
         a+b
       }, Seconds(5), Seconds(5))
+      .map(record => record._2)
     filteredOnlyJson.foreachRDD(rdd => {
       val jsonDataFrame = spark.read.schema(taxiDataSchema).json(rdd.toDS())
       val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
