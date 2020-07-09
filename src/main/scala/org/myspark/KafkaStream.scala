@@ -9,7 +9,7 @@ import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.myspark.dataTypes.TaxiRide
-import play.api.libs.json.Json
+
 
 class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
   def run = {
