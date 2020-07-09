@@ -1,7 +1,7 @@
 package org.myspark
 
 import com.fasterxml.jackson.core.JsonParseException
-import play.api.libs.json.{JsResult, JsValue, Json, Reads}
+import play.api.libs.json.{JsError, JsResult, JsSuccess, JsValue, Json, Reads}
 
 
 object Utils extends JsonValidator {
@@ -20,5 +20,12 @@ object Utils extends JsonValidator {
 
   override def toStructure[T](json: JsValue)(implicit fjs: Reads[T]): JsResult[T] = {
     Json.fromJson[T](json)
+  }
+
+  override def isValidStructure[T](json: JsValue)(implicit fjs: Reads[T]): Boolean = {
+    Json.fromJson[T](json) match {
+      case JsSuccess(_, _) => true
+      case e: JsError => false
+    }
   }
 }
