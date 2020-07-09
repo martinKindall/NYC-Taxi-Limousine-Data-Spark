@@ -9,7 +9,7 @@ import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 
-class KafkaStream extends java.io.Serializable {
+class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
   def run = {
     val conf = new SparkConf()
       .setAppName("KakfaConsumer")
@@ -48,7 +48,11 @@ class KafkaStream extends java.io.Serializable {
       .add("passenger_count", IntegerType, nullable = true)
 
     val filteredOnlyJson = stream
+      .filter(record => record.value != null && jsonValidator.isValidRawJson(record.value))
       .map(record => record.value)
+      .reduceByWindow((a: String, b: String) => {
+        a+b
+      }, Seconds(5), Seconds(5))
     filteredOnlyJson.foreachRDD(rdd => {
       val jsonDataFrame = spark.read.schema(taxiDataSchema).json(rdd.toDS())
       val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
@@ -64,7 +68,7 @@ class KafkaStream extends java.io.Serializable {
 
 object KafkaStream {
   def main(args: Array[String]): Unit = {
-    val streamExec = new KafkaStream
+    val streamExec = new KafkaStream(Utils)
     streamExec.run
   }
 }
