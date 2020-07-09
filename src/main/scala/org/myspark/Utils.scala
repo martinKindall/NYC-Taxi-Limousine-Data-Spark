@@ -1,8 +1,7 @@
 package org.myspark
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.myspark.dataTypes.TaxiRide
-import play.api.libs.json.{JsResult, JsValue, Json}
+import play.api.libs.json.{JsResult, JsValue, Json, Reads}
 
 
 object Utils extends JsonValidator {
@@ -19,7 +18,7 @@ object Utils extends JsonValidator {
     Json.parse(rawJson)
   }
 
-  override def toStructure(json: JsValue): JsResult[TaxiRide] = {
-    Json.fromJson[TaxiRide](json)
+  override def toStructure[T](json: JsValue)(implicit fjs: Reads[T]): JsResult[T] = {
+    Json.fromJson[T](json)
   }
 }

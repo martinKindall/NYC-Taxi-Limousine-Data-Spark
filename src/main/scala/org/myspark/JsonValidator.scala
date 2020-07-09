@@ -1,10 +1,9 @@
 package org.myspark
 
-import org.myspark.dataTypes.TaxiRide
-import play.api.libs.json.{JsResult, JsValue}
+import play.api.libs.json.{JsResult, JsValue, Reads}
 
 trait JsonValidator extends java.io.Serializable {
   def isValidRawJson(rawJson: String): Boolean
   def parse(rawJson: String): JsValue
-  def toStructure(json: JsValue): JsResult[TaxiRide]
+  def toStructure[T](json: JsValue)(implicit fjs: Reads[T]): JsResult[T]
 }
