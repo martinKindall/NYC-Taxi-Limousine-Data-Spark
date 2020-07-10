@@ -65,10 +65,27 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
       }, Seconds(1), Seconds(1))
 
     filteredOnlyJson.foreachRDD(rdd => {
+      val formattedRDD = rdd.map(keyPair => {
+        (keyPair._1, keyPair._2._3.toString)
+      })
+
+      spark
+        .createDataFrame(formattedRDD)
+        .toDF("key", "value")
+        .write
+        .format("kafka")
+        .option("kafka.bootstrap.servers", "localhost:9092")
+        .option("topic", "taxi-data")
+        .save()
+    })
+
+    /*
+    filteredOnlyJson.foreachRDD(rdd => {
       rdd.foreach(keyPair => {
         println(s"${keyPair._1} : ${keyPair._2._1}, ${keyPair._2._2} : count is ${keyPair._2._3}")
       })
     })
+    */
     /*
     filteredOnlyJson.foreachRDD(rdd => {
       val jsonDataFrame = spark.read.schema(taxiDataSchema).json(rdd.toDS())
