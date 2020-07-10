@@ -66,12 +66,11 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
 
     filteredOnlyJson.foreachRDD(rdd => {
       val formattedRDD = rdd.map(keyPair => {
-        (keyPair._1, keyPair._2._3.toString)
+        s"{'key': '${keyPair._1}', 'lat':${keyPair._2._2}, 'lon':${keyPair._2._2}, 'count':${keyPair._2._3}}"
       })
 
-      spark
-        .createDataFrame(formattedRDD)
-        .toDF("key", "value")
+      formattedRDD
+        .toDF("value")
         .write
         .format("kafka")
         .option("kafka.bootstrap.servers", "localhost:9092")
