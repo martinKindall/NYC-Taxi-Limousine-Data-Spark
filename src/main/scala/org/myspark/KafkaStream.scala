@@ -12,12 +12,12 @@ import org.myspark.dataTypes.TaxiRide
 
 
 class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
-  def run = {
-    val conf = new SparkConf()
-      .setAppName("KakfaConsumer")
-      .set("spark.local.dir", "C:\\tmp\\hive")
-    //.setMaster("local")   // do not set when using submit-job
-    val streamingContext = new StreamingContext(conf, Seconds(1))
+  private final val checkPointDir = "C:\\tmp\\hive\\checkpoints"
+
+  def run(): Unit = {
+    val streamingContext = StreamingContext.getOrCreate(
+      checkPointDir,
+      functionToCreateContext _)
     val spark  = SparkSession.builder()
       .getOrCreate()
     import spark.implicits._
@@ -54,12 +54,16 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
       .map(record => jsonValidator.parse(record.value))
       .filter(jsValue => jsonValidator.isValidStructure[TaxiRide](jsValue))
       .map(jsValue => {
-        val taxiData = jsonValidator.toStructure[TaxiRide](jsValue)
-        taxiData.get
+        val taxiData = jsonValidator.toStructure[TaxiRide](jsValue).get
+        val roundedLat = truncateLatLong(taxiData.latitude)
+        val roundedLon = truncateLatLong(taxiData.longitude)
+        val latLonKey = roundedLat.toString + "," + roundedLon.toString
+        latLonKey
       })
+      .countByValueAndWindow(Seconds(10), Seconds(10))
     filteredOnlyJson.foreachRDD(rdd => {
-      rdd.foreach(taxiRide => {
-        println(taxiRide.ride_id)
+      rdd.foreach(keyPair => {
+        println(s"${keyPair._1} : ${keyPair._2}")
       })
     })
     /*
@@ -75,11 +79,26 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
     streamingContext.start()
     streamingContext.awaitTermination()
   }
+
+  private def truncateLatLong(coordinate: Float): Float = {
+    val PRECISION = 0.005f // very approximately 500m
+    (Math.floor(coordinate / PRECISION).toFloat * PRECISION * 10000 + 25f) / 10000f
+  }
+
+  private def functionToCreateContext(): StreamingContext = {
+    val conf = new SparkConf()
+      .setAppName("KakfaConsumer")
+      .set("spark.local.dir", "C:\\tmp\\hive")
+    //.setMaster("local")   // do not set when using submit-job
+    val streamingContext = new StreamingContext(conf, Seconds(1))
+    streamingContext.checkpoint(checkPointDir)
+    streamingContext
+  }
 }
 
 object KafkaStream {
   def main(args: Array[String]): Unit = {
     val streamExec = new KafkaStream(Utils)
-    streamExec.run
+    streamExec.run()
   }
 }
