@@ -53,17 +53,20 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
       .filter(record => record.value != null && jsonValidator.isValidRawJson(record.value))
       .map(record => jsonValidator.parse(record.value))
       .filter(jsValue => jsonValidator.isValidStructure[TaxiRide](jsValue))
-      .map(jsValue => {
-        val taxiData = jsonValidator.toStructure[TaxiRide](jsValue).get
+      .map(jsValue => jsonValidator.toStructure[TaxiRide](jsValue).get)
+      .map(taxiData => {
         val roundedLat = truncateLatLong(taxiData.latitude)
         val roundedLon = truncateLatLong(taxiData.longitude)
         val latLonKey = roundedLat.toString + "," + roundedLon.toString
-        latLonKey
+        (latLonKey, (taxiData.latitude, taxiData.longitude, 1))
       })
-      .countByValueAndWindow(Seconds(10), Seconds(10))
+      .reduceByKeyAndWindow((taxi1: (Float, Float, Int), taxi2: (Float, Float, Int)) => {
+        (taxi1._1, taxi1._2, taxi1._3 + taxi2._3)
+      }, Seconds(1), Seconds(1))
+
     filteredOnlyJson.foreachRDD(rdd => {
       rdd.foreach(keyPair => {
-        println(s"${keyPair._1} : ${keyPair._2}")
+        println(s"${keyPair._1} : ${keyPair._2._1}, ${keyPair._2._2} : count is ${keyPair._2._3}")
       })
     })
     /*
