@@ -6,7 +6,7 @@ import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.myspark.dataTypes.TaxiRide
 
-class TaxiOperations {
+class TaxiOperations extends java.io.Serializable {
 
   def parseDStreamJsonSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
     dsTaxiStream

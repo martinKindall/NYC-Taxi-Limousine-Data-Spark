@@ -57,6 +57,18 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
           .save()
       })
 
+    taxiOperations
+      .parseDStreamJsonSumIncrements(structuredTaxiStream)
+      .foreachRDD(rdd => {
+        rdd
+          .toDF("value")
+          .write
+          .format("kafka")
+          .option("kafka.bootstrap.servers", "localhost:9092")
+          .option("topic", "taxi-dolar")
+          .save()
+      })
+
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
