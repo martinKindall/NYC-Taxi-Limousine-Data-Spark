@@ -1,7 +1,9 @@
 ## Spark Streaming 3.0.0 with Kafka 2.5
 
 __This is a small project where I consume streaming data from Kafka topic A,
-transform it and write the result to another topic B.__
+transform it and write the results to other topics.__
+
+This data was gathered from [NYC Taxi Dataflow Codelab](https://github.com/googlecodelabs/cloud-dataflow-nyc-taxi-tycoon).
 
 The available data in topic A is in json format and has the following schema:
 
@@ -14,8 +16,6 @@ The available data in topic A is in json format and has the following schema:
 - meter_increment:float
 - ride_status:string
 - passenger_count:integer
-
-This data was gathered from [NYC Taxi Dataflow Codelab](https://github.com/googlecodelabs/cloud-dataflow-nyc-taxi-tycoon).
 
 ### Counting rides per second
 
