@@ -65,7 +65,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
           .write
           .format("kafka")
           .option("kafka.bootstrap.servers", "localhost:9092")
-          .option("topic", "taxi-dolar")
+          .option("topic", "taxi-dollar")
           .save()
       })
 

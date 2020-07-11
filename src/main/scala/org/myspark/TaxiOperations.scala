@@ -15,7 +15,7 @@ class TaxiOperations extends java.io.Serializable {
       })
       .reduceByWindow((amount1: Float, amount2: Float) => amount1 + amount2,
         Seconds(60), Seconds(3))
-      .map(totalSum => s"{'dolar_per_minute': $totalSum}")
+      .map(totalSum => s"{'dollar_per_minute': $totalSum}")
   }
 
   def parseDStreamJsonCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
