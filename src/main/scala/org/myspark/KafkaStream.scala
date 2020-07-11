@@ -2,7 +2,7 @@ package org.myspark
 
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
+import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType}
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.kafka010._
@@ -43,8 +43,56 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
       .map(record => jsonValidator.parse(record.value))
       .filter(jsValue => jsonValidator.isValidStructure[TaxiRide](jsValue))
 
+    parseDStreamJsonAggregateAndWriteToKafka(
+      filteredOnlyJson.map(jsValue => {
+        jsonValidator.toStructure[TaxiRide](jsValue).get
+    }))
+
+    parseDStreamJsonAsTaxiStruct(filteredOnlyJson.map(jsValue => jsValue.toString()))
+
+    streamingContext.start()
+    streamingContext.awaitTermination()
+  }
+
+  private def truncateLatLong(coordinate: Float): Float = {
+    val PRECISION = 0.005f // very approximately 500m
+    (Math.floor(coordinate / PRECISION).toFloat * PRECISION * 10000 + 25f) / 10000f
+  }
+
+  private def functionToCreateContext(): StreamingContext = {
+    sparkCtx.sparkContext.getConf
+      .setAppName("KafkaConsumer")
+      .set("spark.local.dir", "C:\\tmp\\hive")
+    //.setMaster("local")   // do not set when using submit-job
+    val streamingContext = new StreamingContext(sparkCtx.sparkContext, Seconds(1))
+    streamingContext.checkpoint(checkPointDir)
+    streamingContext
+  }
+
+  private def parseDStreamJsonAsTaxiStruct(dsStreamJson: DStream[String]): Unit = {
+    val taxiDataSchema = new StructType()
+      .add("ride_id", StringType, nullable = true)
+      .add("point_idx", IntegerType, nullable = true)
+      .add("latitude", FloatType, nullable = true)
+      .add("longitude", FloatType, nullable = true)
+      /*.add("timestamp", TimestampType, nullable = true)
+      .add("meter_reading", FloatType, nullable = true)
+      .add("meter_increment", FloatType, nullable = true)
+      .add("ride_status", StringType, nullable = true)
+      .add("passenger_count", IntegerType, nullable = true)
+       */  // not ready
+
+    dsStreamJson.foreachRDD(rdd => {
+      val jsonDataFrame = sparkCtx.read.schema(taxiDataSchema).json(rdd.toDS())
+      val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
+      filteredNullsDF.foreach(row => {
+        println(row.json)
+      })
+    })
+  }
+
+  private def parseDStreamJsonAggregateAndWriteToKafka(filteredOnlyJson: DStream[TaxiRide]): Unit = {
     val aggregatedCount = filteredOnlyJson
-      .map(jsValue => jsonValidator.toStructure[TaxiRide](jsValue).get)
       .map(taxiData => {
         val roundedLat = truncateLatLong(taxiData.latitude)
         val roundedLon = truncateLatLong(taxiData.longitude)
@@ -66,48 +114,6 @@ class KafkaStream(jsonValidator: JsonValidator) extends java.io.Serializable {
         .option("kafka.bootstrap.servers", "localhost:9092")
         .option("topic", "taxi-data")
         .save()
-    })
-
-    parseRDDJsonAsTaxiStruct(filteredOnlyJson.map(jsValue => jsValue.toString()))
-
-    streamingContext.start()
-    streamingContext.awaitTermination()
-  }
-
-  private def truncateLatLong(coordinate: Float): Float = {
-    val PRECISION = 0.005f // very approximately 500m
-    (Math.floor(coordinate / PRECISION).toFloat * PRECISION * 10000 + 25f) / 10000f
-  }
-
-  private def functionToCreateContext(): StreamingContext = {
-    sparkCtx.sparkContext.getConf
-      .setAppName("KafkaConsumer")
-      .set("spark.local.dir", "C:\\tmp\\hive")
-    //.setMaster("local")   // do not set when using submit-job
-    val streamingContext = new StreamingContext(sparkCtx.sparkContext, Seconds(1))
-    streamingContext.checkpoint(checkPointDir)
-    streamingContext
-  }
-
-  private def parseRDDJsonAsTaxiStruct(dsStreamJson: DStream[String]): Unit = {
-    val taxiDataSchema = new StructType()
-      .add("ride_id", StringType, nullable = true)
-      .add("point_idx", IntegerType, nullable = true)
-      .add("latitude", FloatType, nullable = true)
-      .add("longitude", FloatType, nullable = true)
-      /*.add("timestamp", TimestampType, nullable = true)
-      .add("meter_reading", FloatType, nullable = true)
-      .add("meter_increment", FloatType, nullable = true)
-      .add("ride_status", StringType, nullable = true)
-      .add("passenger_count", IntegerType, nullable = true)
-       */  // not ready
-
-    dsStreamJson.foreachRDD(rdd => {
-      val jsonDataFrame = sparkCtx.read.schema(taxiDataSchema).json(rdd.toDS())
-      val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
-      filteredNullsDF.foreach(row => {
-        println(row.json)
-      })
     })
   }
 }
