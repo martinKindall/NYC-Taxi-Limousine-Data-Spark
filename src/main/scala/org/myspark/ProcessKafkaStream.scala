@@ -41,18 +41,21 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
       .map(record => jsonValidator.parse(record.value))
       .filter(jsValue => jsonValidator.isValidStructure[TaxiRide](jsValue))
 
-    taxiOperations.parseDStreamJsonCountRidesAndWriteToKafka(
-      filteredOnlyJson.map(jsValue => {
-        jsonValidator.toStructure[TaxiRide](jsValue).get
-    })).foreachRDD(rdd => {
-      rdd
-        .toDF("value")
-        .write
-        .format("kafka")
-        .option("kafka.bootstrap.servers", "localhost:9092")
-        .option("topic", "taxi-data")
-        .save()
+    val structuredTaxiStream = filteredOnlyJson.map(jsValue => {
+      jsonValidator.toStructure[TaxiRide](jsValue).get
     })
+
+    taxiOperations
+      .parseDStreamJsonCountRides(structuredTaxiStream)
+      .foreachRDD(rdd => {
+        rdd
+          .toDF("value")
+          .write
+          .format("kafka")
+          .option("kafka.bootstrap.servers", "localhost:9092")
+          .option("topic", "taxi-data")
+          .save()
+      })
 
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,

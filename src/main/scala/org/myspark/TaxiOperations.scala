@@ -8,8 +8,18 @@ import org.myspark.dataTypes.TaxiRide
 
 class TaxiOperations {
 
-  def parseDStreamJsonCountRidesAndWriteToKafka(filteredOnlyJson: DStream[TaxiRide]): DStream[String] = {
-    val aggregatedCount = filteredOnlyJson
+  def parseDStreamJsonSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
+    dsTaxiStream
+      .map(taxiData => {
+        taxiData.meterIncrement
+      })
+      .reduceByWindow((amount1: Float, amount2: Float) => amount1 + amount2,
+        Seconds(60), Seconds(3))
+      .map(totalSum => s"{'dolar_per_minute': $totalSum}")
+  }
+
+  def parseDStreamJsonCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
+    val aggregatedCount = dsTaxiStream
       .map(taxiData => {
         val roundedLat = truncateLatLong(taxiData.latitude)
         val roundedLon = truncateLatLong(taxiData.longitude)
