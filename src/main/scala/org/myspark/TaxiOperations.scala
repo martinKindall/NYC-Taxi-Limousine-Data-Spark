@@ -33,9 +33,9 @@ class TaxiOperations {
       .add("point_idx", IntegerType, nullable = true)
       .add("latitude", FloatType, nullable = true)
       .add("longitude", FloatType, nullable = true)
+      .add("meter_increment", FloatType, nullable = true)
     /*.add("timestamp", TimestampType, nullable = true)
     .add("meter_reading", FloatType, nullable = true)
-    .add("meter_increment", FloatType, nullable = true)
     .add("ride_status", StringType, nullable = true)
     .add("passenger_count", IntegerType, nullable = true)
      */  // not ready
