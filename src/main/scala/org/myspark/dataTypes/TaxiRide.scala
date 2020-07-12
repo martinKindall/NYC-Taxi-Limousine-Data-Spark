@@ -1,6 +1,6 @@
 package org.myspark.dataTypes
 
-import play.api.libs.json.{Reads, JsPath}
+import play.api.libs.json.{JsPath, Reads}
 import play.api.libs.functional.syntax._
 
 case class TaxiRide(
@@ -8,7 +8,8 @@ case class TaxiRide(
  pointIdx: Int,
  latitude: Float,
  longitude: Float,
- meterIncrement: Float
+ meterIncrement: Float,
+ timestamp: String
 )
 
 object TaxiRide {
@@ -17,6 +18,7 @@ object TaxiRide {
       (JsPath \ "point_idx").read[Int] and
       (JsPath \ "latitude").read[Float] and
       (JsPath \ "longitude").read[Float] and
-      (JsPath \ "meter_increment").read[Float]
+      (JsPath \ "meter_increment").read[Float] and
+      (JsPath \ "timestamp").read[String]
     )(TaxiRide.apply _)
 }

@@ -8,12 +8,11 @@ import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.myspark.dataTypes.TaxiRide
 
-
+@SerialVersionUID(6529685098267757691L)
 class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOperations) extends java.io.Serializable {
   private final val checkPointDir = "C:\\tmp\\hive\\checkpoints"
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
-  import sparkCtx.implicits._
 
   def run(): Unit = {
     val streamingContext = StreamingContext.getOrCreate(
@@ -45,6 +44,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
       jsonValidator.toStructure[TaxiRide](jsValue).get
     })
 
+    /*
     taxiOperations
       .parseDStreamJsonCountRides(structuredTaxiStream)
       .foreachRDD(rdd => {
@@ -69,9 +69,16 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
           .save()
       })
 
+
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
+    */
+
+    taxiOperations.parseDStreamJsonSumIncrementsEventTime(
+      sparkCtx,
+      structuredTaxiStream
+    )
 
     streamingContext.start()
     streamingContext.awaitTermination()

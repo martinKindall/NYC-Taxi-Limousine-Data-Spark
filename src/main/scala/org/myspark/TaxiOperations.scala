@@ -1,11 +1,13 @@
 package org.myspark
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType}
+import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
 import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.myspark.dataTypes.TaxiRide
+import org.apache.spark.sql.functions.window
 
+@SerialVersionUID(6529685098267757690L)
 class TaxiOperations extends java.io.Serializable {
 
   def parseDStreamJsonSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
@@ -16,6 +18,22 @@ class TaxiOperations extends java.io.Serializable {
       .reduceByWindow((amount1: Float, amount2: Float) => amount1 + amount2,
         Seconds(60), Seconds(3))
       .map(totalSum => s"{'dollar_per_minute': $totalSum}")
+  }
+
+  def parseDStreamJsonSumIncrementsEventTime(sparkCtx: SparkSession, dsTaxiStream: DStream[TaxiRide]): Unit = {
+    import sparkCtx.implicits._
+
+    dsTaxiStream
+      .foreachRDD(rdd => {
+        rdd.toDF().withWatermark("timestamp", "60 seconds")
+          .groupBy(
+            window($"timestamp", "60 seconds", "3 seconds")
+          )
+          .sum("meterIncrement")
+          .foreach(row => {
+            println(row.json)
+          })
+      })
   }
 
   def parseDStreamJsonCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
@@ -44,7 +62,8 @@ class TaxiOperations extends java.io.Serializable {
       .add("latitude", FloatType, nullable = true)
       .add("longitude", FloatType, nullable = true)
       .add("meter_increment", FloatType, nullable = true)
-    /*.add("timestamp", TimestampType, nullable = true)
+      .add("timestamp", TimestampType, nullable = true)
+      /*
     .add("meter_reading", FloatType, nullable = true)
     .add("ride_status", StringType, nullable = true)
     .add("passenger_count", IntegerType, nullable = true)
