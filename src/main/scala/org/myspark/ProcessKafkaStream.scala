@@ -13,6 +13,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
   private final val checkPointDir = "C:\\tmp\\hive\\checkpoints"
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
+  import sparkCtx.implicits._
 
   def run(): Unit = {
     val streamingContext = StreamingContext.getOrCreate(
@@ -44,7 +45,6 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
       jsonValidator.toStructure[TaxiRide](jsValue).get
     })
 
-    /*
     taxiOperations
       .parseDStreamJsonCountRides(structuredTaxiStream)
       .foreachRDD(rdd => {
@@ -73,7 +73,6 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
-    */
 
     taxiOperations.parseDStreamJsonSumIncrementsEventTime(
       sparkCtx,
