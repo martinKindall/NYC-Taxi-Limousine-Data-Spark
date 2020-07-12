@@ -38,3 +38,17 @@ The output data has the following schema (JSON):
 - dollar_per_minute:float
 
 dollar_per_minute is the sum of each _meter_increment_ field in every taxi ride during the last 60 seconds, computed each 3 seconds.
+
+### Dollar collected per minute in Event Time
+
+Previous output was not considering event time, thus may not lead to accurrate results.
+Each taxi ride has a timestamp, which we will consider as the event time. Now we can use accurate time windows and receive data out of order, because Spark Streaming has 
+[built-in methods to handle this](http://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#window-operations-on-event-time). We can specify a delayThreshold of 60 seconds for late data and window of 60 seconds with a slide duration of 10 seconds.
+
+The output data has the following schema (JSON):
+
+- window: {
+  start: string,
+  end: string
+}
+- sum(meter_increment): float

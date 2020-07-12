@@ -30,7 +30,7 @@ class TaxiOperations extends java.io.Serializable {
         applyOnDF(
           rdd.toDF().withWatermark("timestamp", "60 seconds")
             .groupBy(
-              window($"timestamp", "60 seconds", "3 seconds")
+              window($"timestamp", "60 seconds", "10 seconds")
             )
             .sum("meterIncrement")
             .toJSON
