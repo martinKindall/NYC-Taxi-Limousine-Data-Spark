@@ -1,7 +1,7 @@
 package org.myspark
 
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
@@ -77,7 +77,16 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
 
     taxiOperations.parseDStreamJsonSumIncrementsEventTime(
       sparkCtx,
-      structuredTaxiStream
+      structuredTaxiStream,
+      (aggregatedDataFrame: Dataset[String]) => {
+        aggregatedDataFrame
+          .toDF("value")
+          .write
+          .format("kafka")
+          .option("kafka.bootstrap.servers", "localhost:9092")
+          .option("topic", "taxi-dollar-accurate")
+          .save()
+      }
     )
 
     streamingContext.start()

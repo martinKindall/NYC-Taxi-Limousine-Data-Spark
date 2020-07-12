@@ -1,6 +1,6 @@
 package org.myspark
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
 import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
@@ -20,19 +20,21 @@ class TaxiOperations extends java.io.Serializable {
       .map(totalSum => s"{'dollar_per_minute': $totalSum}")
   }
 
-  def parseDStreamJsonSumIncrementsEventTime(sparkCtx: SparkSession, dsTaxiStream: DStream[TaxiRide]): Unit = {
+  def parseDStreamJsonSumIncrementsEventTime(sparkCtx: SparkSession,
+                                             dsTaxiStream: DStream[TaxiRide],
+                                             applyOnDF: Dataset[String] => Unit): Unit = {
     import sparkCtx.implicits._
 
     dsTaxiStream
       .foreachRDD(rdd => {
-        rdd.toDF().withWatermark("timestamp", "60 seconds")
-          .groupBy(
-            window($"timestamp", "60 seconds", "3 seconds")
-          )
-          .sum("meterIncrement")
-          .foreach(row => {
-            println(row.json)
-          })
+        applyOnDF(
+          rdd.toDF().withWatermark("timestamp", "60 seconds")
+            .groupBy(
+              window($"timestamp", "60 seconds", "3 seconds")
+            )
+            .sum("meterIncrement")
+            .toJSON
+        )
       })
   }
 
