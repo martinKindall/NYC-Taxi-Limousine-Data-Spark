@@ -8,12 +8,53 @@ import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.myspark.dataTypes.TaxiRide
 import org.apache.spark.sql.functions.window
+import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
+
 
 @SerialVersionUID(6529685098267757690L)
 class TaxiOperations extends java.io.Serializable {
 
-  def parseDStreamTaxiSessionWindows(dsTaxiStream: DStream[TaxiRide]): Unit = {
+  def parseDStreamTaxiSessionWindows(sparkCtx: SparkSession, dsTaxiStream: DStream[TaxiRide]): Unit = {
+    import sparkCtx.implicits._
 
+    dsTaxiStream
+      .map(taxiData => {
+        Event(taxiData.rideId, Timestamp.valueOf(taxiData.timestamp), taxiData.rideStatus)
+      })
+      .foreachRDD(rdd => {
+        val streamUpdates =
+          rdd
+          .toDF()
+          .groupByKey(row => row.getAs[String]("sessionId"))
+          .mapGroupsWithState[SessionInfo, SessionUpdate](GroupStateTimeout.ProcessingTimeTimeout) {
+            case (sessionId: String, events: Iterator[Event], state: GroupState[SessionInfo]) =>
+              if (state.hasTimedOut) {
+                SessionUpdate(
+                  sessionId,
+                  0.0f,
+                  0.0f,
+                  Timestamp.valueOf("2020-10-10 20:00:00"),
+                  30L,
+                  expired = true
+                )
+              } else {
+                SessionUpdate(
+                  sessionId,
+                  0.0f,
+                  0.0f,
+                  Timestamp.valueOf("2020-10-10 20:00:00"),
+                  30L,
+                  expired = false
+                )
+              }
+          }
+
+        streamUpdates
+          .writeStream
+          .outputMode("update")
+          .format("console")
+          .start()
+      })
   }
 
   def parseDStreamTaxiSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
@@ -92,7 +133,7 @@ class TaxiOperations extends java.io.Serializable {
   }
 }
 
-case class Event(sessionId: String, timestamp: Timestamp)
+case class Event(sessionId: String, timestamp: Timestamp, rideStatus: String)
 
 case class SessionInfo(
                   latitude: Float,

@@ -58,7 +58,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
       })
 
     taxiOperations
-      .parseDStreamJsonSumIncrements(structuredTaxiStream)
+      .parseDStreamTaxiSumIncrements(structuredTaxiStream)
       .foreachRDD(rdd => {
         rdd
           .toDF("value")

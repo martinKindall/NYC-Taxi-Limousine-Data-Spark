@@ -9,7 +9,8 @@ case class TaxiRide(
  latitude: Float,
  longitude: Float,
  meterIncrement: Float,
- timestamp: String
+ timestamp: String,
+ rideStatus: String
 )
 
 object TaxiRide {
@@ -19,6 +20,7 @@ object TaxiRide {
       (JsPath \ "latitude").read[Float] and
       (JsPath \ "longitude").read[Float] and
       (JsPath \ "meter_increment").read[Float] and
-      (JsPath \ "timestamp").read[String]
+      (JsPath \ "timestamp").read[String] and
+      (JsPath \ "ride_status").read[String]
     )(TaxiRide.apply _)
 }
