@@ -46,7 +46,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
     })
 
     taxiOperations
-      .parseDStreamJsonCountRides(structuredTaxiStream)
+      .parseDStreamTaxiCountRides(structuredTaxiStream)
       .foreachRDD(rdd => {
         rdd
           .toDF("value")
@@ -74,7 +74,7 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
 
-    taxiOperations.parseDStreamJsonSumIncrementsEventTime(
+    taxiOperations.parseDStreamTaxiSumIncrementsEventTime(
       sparkCtx,
       structuredTaxiStream,
       (aggregatedDataFrame: Dataset[String]) => {

@@ -1,5 +1,7 @@
 package org.myspark
 
+import java.sql.Timestamp
+
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
 import org.apache.spark.streaming.Seconds
@@ -10,7 +12,11 @@ import org.apache.spark.sql.functions.window
 @SerialVersionUID(6529685098267757690L)
 class TaxiOperations extends java.io.Serializable {
 
-  def parseDStreamJsonSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
+  def parseDStreamTaxiSessionWindows(dsTaxiStream: DStream[TaxiRide]): Unit = {
+
+  }
+
+  def parseDStreamTaxiSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
     dsTaxiStream
       .map(taxiData => {
         taxiData.meterIncrement
@@ -20,7 +26,7 @@ class TaxiOperations extends java.io.Serializable {
       .map(totalSum => s"{'dollar_per_minute': $totalSum}")
   }
 
-  def parseDStreamJsonSumIncrementsEventTime(sparkCtx: SparkSession,
+  def parseDStreamTaxiSumIncrementsEventTime(sparkCtx: SparkSession,
                                              dsTaxiStream: DStream[TaxiRide],
                                              applyOnDF: Dataset[String] => Unit): Unit = {
     import sparkCtx.implicits._
@@ -38,7 +44,7 @@ class TaxiOperations extends java.io.Serializable {
       })
   }
 
-  def parseDStreamJsonCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
+  def parseDStreamTaxiCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
     val aggregatedCount = dsTaxiStream
       .map(taxiData => {
         val roundedLat = truncateLatLong(taxiData.latitude)
@@ -85,3 +91,21 @@ class TaxiOperations extends java.io.Serializable {
     (Math.floor(coordinate / PRECISION).toFloat * PRECISION * 10000 + 25f) / 10000f
   }
 }
+
+case class Event(sessionId: String, timestamp: Timestamp)
+
+case class SessionInfo(
+                  latitude: Float,
+                  longitude: Float,
+                  startTimestamp: Timestamp,
+                  endTimestamp: Timestamp) {
+  def durationMs: Long = endTimestamp.getTime - startTimestamp.getTime
+}
+
+case class SessionUpdate(
+                  sessionId: String,
+                  latitude: Float,
+                  longitude: Float,
+                  startTimestamp: Timestamp,
+                  durationMs: Long,
+                  expired: Boolean)
