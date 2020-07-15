@@ -3,7 +3,8 @@ package org.myspark
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{StringType, StructType}
 
-class KafkaStructuredStreaming {
+@SerialVersionUID(6529685098267757694L)
+class KafkaStructuredStreaming extends java.io.Serializable {
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
   import sparkCtx.implicits._

@@ -3,7 +3,7 @@ package org.myspark
 import java.sql.Timestamp
 
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.sql.types.{FloatType, IntegerType, StringType, StructType, TimestampType}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.myspark.dataTypes.TaxiRide
@@ -12,7 +12,7 @@ import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
 
 
 @SerialVersionUID(6529685098267757690L)
-class TaxiOperations extends java.io.Serializable {
+class TaxiOperations(taxiStruct: StructType) extends java.io.Serializable {
 
   def parseDStreamTaxiSessionWindows(sparkCtx: SparkSession, dsTaxiStream: DStream[TaxiRide]): Unit = {
     import sparkCtx.implicits._
@@ -105,13 +105,6 @@ class TaxiOperations extends java.io.Serializable {
   def parseDStreamJsonAsTaxiStruct(sparkCtx: SparkSession, dsStreamJson: DStream[String]): Unit = {
     import sparkCtx.implicits._
 
-    val taxiDataSchema = new StructType()
-      .add("ride_id", StringType, nullable = true)
-      .add("point_idx", IntegerType, nullable = true)
-      .add("latitude", FloatType, nullable = true)
-      .add("longitude", FloatType, nullable = true)
-      .add("meter_increment", FloatType, nullable = true)
-      .add("timestamp", TimestampType, nullable = true)
       /*
     .add("meter_reading", FloatType, nullable = true)
     .add("ride_status", StringType, nullable = true)
@@ -119,7 +112,7 @@ class TaxiOperations extends java.io.Serializable {
      */  // not ready
 
     dsStreamJson.foreachRDD(rdd => {
-      val jsonDataFrame = sparkCtx.read.schema(taxiDataSchema).json(rdd.toDS())
+      val jsonDataFrame = sparkCtx.read.schema(taxiStruct).json(rdd.toDS())
       val filteredNullsDF = jsonDataFrame.where("ride_id is not null")
       filteredNullsDF.foreach(row => {
         println(row.json)
