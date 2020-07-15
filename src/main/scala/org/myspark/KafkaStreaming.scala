@@ -9,7 +9,7 @@ import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.myspark.dataTypes.TaxiRide
 
 @SerialVersionUID(6529685098267757691L)
-class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOperations) extends java.io.Serializable {
+class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperations) extends java.io.Serializable {
   private final val checkPointDir = "C:\\tmp\\hive\\checkpoints"
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
@@ -103,9 +103,9 @@ class ProcessKafkaStream(jsonValidator: JsonValidator, taxiOperations: TaxiOpera
   }
 }
 
-object ProcessKafkaStream {
+object KafkaStreaming {
   def main(args: Array[String]): Unit = {
-    val streamExec = new ProcessKafkaStream(Utils, new TaxiOperations)
+    val streamExec = new KafkaStreaming(Utils, new TaxiOperations)
     streamExec.run()
   }
 }
