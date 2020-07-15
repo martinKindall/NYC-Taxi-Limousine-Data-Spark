@@ -45,6 +45,7 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
       jsonValidator.toStructure[TaxiRide](jsValue).get
     })
 
+    /*
     taxiOperations
       .parseDStreamTaxiCountRides(structuredTaxiStream)
       .foreachRDD(rdd => {
@@ -68,11 +69,11 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
           .option("topic", "taxi-dollar")
           .save()
       })
-
+*/
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
-
+/*
     taxiOperations.parseDStreamTaxiSumIncrementsEventTime(
       sparkCtx,
       structuredTaxiStream,
@@ -86,7 +87,7 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
           .save()
       }
     )
-
+*/
     streamingContext.start()
     streamingContext.awaitTermination()
   }

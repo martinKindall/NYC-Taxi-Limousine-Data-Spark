@@ -1,13 +1,14 @@
 package org.myspark
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{StringType, StructType}
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.functions._
+
 
 @SerialVersionUID(6529685098267757694L)
-class KafkaStructuredStreaming extends java.io.Serializable {
+class KafkaStructuredStreaming(taxiStruct: StructType) extends java.io.Serializable {
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
-  import sparkCtx.implicits._
 
   def run(): Unit = {
     val df = sparkCtx
@@ -15,22 +16,16 @@ class KafkaStructuredStreaming extends java.io.Serializable {
       .format("kafka")
       .option("kafka.bootstrap.servers", "localhost:9092")
       .option("subscribe", "test")
-      .option("auto.offset.reset", "earliest")
+      .option("startingOffsets", "earliest")
       .load()
 
-    val schema = new StructType()
-      .add("ride_id", StringType, nullable = true)
-      .add("ride_id", StringType, nullable = true)
-
-
-    df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
-      .as[(String, String)]
-
     val query = df
-      .writeStream
-      .outputMode("update")
-      .format("console")
-      .start()
+    .writeStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("topic", "taxi-sink")
+    .option("checkpointLocation", "C:\\tmp\\hive\\checkpoints")
+    .start()
 
     query.awaitTermination()
   }
