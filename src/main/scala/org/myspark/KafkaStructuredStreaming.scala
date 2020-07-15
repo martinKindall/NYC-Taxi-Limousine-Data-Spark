@@ -1,6 +1,7 @@
 package org.myspark
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{StringType, StructType}
 
 class KafkaStructuredStreaming {
   private val sparkCtx: SparkSession  = SparkSession.builder()
@@ -15,6 +16,12 @@ class KafkaStructuredStreaming {
       .option("subscribe", "test")
       .option("auto.offset.reset", "earliest")
       .load()
+
+    val schema = new StructType()
+      .add("ride_id", StringType, nullable = true)
+      .add("ride_id", StringType, nullable = true)
+
+
     df.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
       .as[(String, String)]
 

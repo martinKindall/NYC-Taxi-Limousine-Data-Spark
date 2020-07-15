@@ -69,7 +69,6 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
           .save()
       })
 
-
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
@@ -100,12 +99,5 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
     val streamingContext = new StreamingContext(sparkCtx.sparkContext, Seconds(1))
     streamingContext.checkpoint(checkPointDir)
     streamingContext
-  }
-}
-
-object KafkaStreaming {
-  def main(args: Array[String]): Unit = {
-    val streamExec = new KafkaStreaming(Utils, new TaxiOperations)
-    streamExec.run()
   }
 }
