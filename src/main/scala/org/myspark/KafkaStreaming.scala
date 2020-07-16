@@ -9,6 +9,7 @@ import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.myspark.dataTypes.TaxiRide
 import org.myspark.operations.TaxiOperations
 
+
 @SerialVersionUID(6529685098267757691L)
 class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperations) extends java.io.Serializable {
   private final val checkPointDir = "C:\\tmp\\hive\\checkpoints"

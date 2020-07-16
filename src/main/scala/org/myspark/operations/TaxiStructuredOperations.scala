@@ -6,7 +6,9 @@ import org.apache.spark.sql.functions.window
 import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-class TaxiStructuredOperations {
+
+@SerialVersionUID(6529685098267757699L)
+class TaxiStructuredOperations extends java.io.Serializable {
   def toSumIncrementsEventTime(sparkCtx: SparkSession, query: Dataset[Row]): Dataset[Row] = {
     import sparkCtx.implicits._
 
@@ -43,20 +45,21 @@ class TaxiStructuredOperations {
             state.remove()
             finalUpdate
           } else {
-            val eventTimestamps = events.map(_.timestamp.getTime).toSeq
-            val eventStartingLatLong: Option[(Float, Float)] = getPickupLatLong(events)
+            val eventList = events.toList
+            val eventTimestamps = eventList.map(_.timestamp.getTime)
+            val eventStartingLatLong: Option[(Float, Float)] = getPickupLatLong(eventList)
 
             val updatedSession = if (state.exists) {
               val oldSession = state.get
               val startLatLong = getStartPickUpOrMaintainPrevState(state, eventStartingLatLong)
-              
+
               SessionInfo(
                 startLatLong._1,
                 startLatLong._2,
                 oldSession.startTimestampMs,
                 math.max(oldSession.endTimestampMs, eventTimestamps.max))
             } else {
-              val startLatLong = getStartPickUpOrGetFirstEventLocation(events, eventStartingLatLong)
+              val startLatLong = getStartPickUpOrGetFirstEventLocation(eventList, eventStartingLatLong)
 
               SessionInfo(
                 startLatLong._1,
@@ -79,7 +82,7 @@ class TaxiStructuredOperations {
       }
   }
 
-  private def getPickupLatLong(events: Iterator[Event]): Option[(Float, Float)] = {
+  private def getPickupLatLong(events: List[Event]): Option[(Float, Float)] = {
     events.find(event => event.rideStatus == "pickup").map(event => {
       (event.latitude, event.longitude)
     })
@@ -95,11 +98,11 @@ class TaxiStructuredOperations {
     }
   }
 
-  private def getStartPickUpOrGetFirstEventLocation(events: Iterator[Event],
+  private def getStartPickUpOrGetFirstEventLocation(events: List[Event],
                                                     eventStartingLatLong: Option[(Float, Float)]
                                                    ): (Float, Float) = {
     if (eventStartingLatLong.isEmpty) {
-      events.toList.map(event => (event.latitude, event.longitude)).head
+      events.map(event => (event.latitude, event.longitude)).head
     } else {
       eventStartingLatLong.get
     }
