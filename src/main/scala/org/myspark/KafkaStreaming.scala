@@ -1,7 +1,7 @@
 package org.myspark
 
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
@@ -46,7 +46,6 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
       jsonValidator.toStructure[TaxiRide](jsValue).get
     })
 
-    /*
     taxiOperations
       .parseDStreamTaxiCountRides(structuredTaxiStream)
       .foreachRDD(rdd => {
@@ -70,7 +69,7 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
           .option("topic", "taxi-dollar")
           .save()
       })
-*/
+
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
