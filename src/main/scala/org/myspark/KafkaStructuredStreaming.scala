@@ -26,15 +26,13 @@ class KafkaStructuredStreaming(taxiStruct: StructType) extends java.io.Serializa
           col("value").cast("string"),
           taxiStruct).alias("taxi_ride")
       ).select("taxi_ride.*")
-      /*
       .withWatermark("timestamp", "60 seconds")
       .groupBy(
         window($"timestamp", "60 seconds", "10 seconds")
       )
-      .sum("meterIncrement")
+      .sum("meter_increment").alias("total_money")
       .toJSON
       .toDF("value")
-      */
       .writeStream
       .outputMode("update")
       .format("console")
