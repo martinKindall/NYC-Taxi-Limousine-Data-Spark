@@ -7,6 +7,7 @@ import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.myspark.dataTypes.TaxiRide
+import org.myspark.operations.TaxiOperations
 
 @SerialVersionUID(6529685098267757691L)
 class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperations) extends java.io.Serializable {
@@ -73,21 +74,7 @@ class KafkaStreaming(jsonValidator: JsonValidator, taxiOperations: TaxiOperation
     taxiOperations.parseDStreamJsonAsTaxiStruct(
       sparkCtx,
       filteredOnlyJson.map(jsValue => jsValue.toString()))
-/*
-    taxiOperations.parseDStreamTaxiSumIncrementsEventTime(
-      sparkCtx,
-      structuredTaxiStream,
-      (aggregatedDataFrame: Dataset[String]) => {
-        aggregatedDataFrame
-          .toDF("value")
-          .write
-          .format("kafka")
-          .option("kafka.bootstrap.servers", "localhost:9092")
-          .option("topic", "taxi-dollar-accurate")
-          .save()
-      }
-    )
-*/
+
     streamingContext.start()
     streamingContext.awaitTermination()
   }

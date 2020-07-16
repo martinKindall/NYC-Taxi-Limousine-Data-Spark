@@ -1,14 +1,13 @@
-package org.myspark
+package org.myspark.operations
 
 import java.sql.Timestamp
 
-import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.dstream.DStream
 import org.myspark.dataTypes.TaxiRide
-import org.apache.spark.sql.functions.window
-import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
 
 
 @SerialVersionUID(6529685098267757690L)
@@ -67,24 +66,6 @@ class TaxiOperations(taxiStruct: StructType) extends java.io.Serializable {
       .map(totalSum => s"{'dollar_per_minute': $totalSum}")
   }
 
-  def parseDStreamTaxiSumIncrementsEventTime(sparkCtx: SparkSession,
-                                             dsTaxiStream: DStream[TaxiRide],
-                                             applyOnDF: Dataset[String] => Unit): Unit = {
-    import sparkCtx.implicits._
-
-    dsTaxiStream
-      .foreachRDD(rdd => {
-        applyOnDF(
-          rdd.toDF().withWatermark("timestamp", "60 seconds")
-            .groupBy(
-              window($"timestamp", "60 seconds", "10 seconds")
-            )
-            .sum("meterIncrement")
-            .toJSON
-        )
-      })
-  }
-
   def parseDStreamTaxiCountRides(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
     val aggregatedCount = dsTaxiStream
       .map(taxiData => {
@@ -104,12 +85,6 @@ class TaxiOperations(taxiStruct: StructType) extends java.io.Serializable {
 
   def parseDStreamJsonAsTaxiStruct(sparkCtx: SparkSession, dsStreamJson: DStream[String]): Unit = {
     import sparkCtx.implicits._
-
-      /*
-    .add("meter_reading", FloatType, nullable = true)
-    .add("ride_status", StringType, nullable = true)
-    .add("passenger_count", IntegerType, nullable = true)
-     */  // not ready
 
     dsStreamJson.foreachRDD(rdd => {
       val jsonDataFrame = sparkCtx.read.schema(taxiStruct).json(rdd.toDS())

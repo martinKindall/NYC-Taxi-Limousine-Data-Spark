@@ -3,13 +3,13 @@ package org.myspark
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.functions._
+import org.myspark.operations.TaxiStructuredOperations
 
 
 @SerialVersionUID(6529685098267757694L)
-class KafkaStructuredStreaming(taxiStruct: StructType) extends java.io.Serializable {
+class KafkaStructuredStreaming(taxiStruct: StructType, taxiOperations: TaxiStructuredOperations) extends java.io.Serializable {
   private val sparkCtx: SparkSession  = SparkSession.builder()
     .getOrCreate()
-  import sparkCtx.implicits._
 
   def run(): Unit = {
     val df = sparkCtx
@@ -26,11 +26,8 @@ class KafkaStructuredStreaming(taxiStruct: StructType) extends java.io.Serializa
           col("value").cast("string"),
           taxiStruct).alias("taxi_ride")
       ).select("taxi_ride.*")
-      .withWatermark("timestamp", "60 seconds")
-      .groupBy(
-        window($"timestamp", "60 seconds", "10 seconds")
-      )
-      .sum("meter_increment").alias("total_money")
+      
+    val finalQuery = taxiOperations.toSumIncrementsEventTime(sparkCtx, query)
       .toJSON
       .toDF("value")
       .writeStream
@@ -38,6 +35,6 @@ class KafkaStructuredStreaming(taxiStruct: StructType) extends java.io.Serializa
       .format("console")
       .start()
 
-    query.awaitTermination()
+    finalQuery.awaitTermination()
   }
 }
