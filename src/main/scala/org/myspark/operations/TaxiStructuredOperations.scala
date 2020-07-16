@@ -23,6 +23,7 @@ class TaxiStructuredOperations extends java.io.Serializable {
     import sparkCtx.implicits._
 
     query
+      .withWatermark("timestamp", "30 seconds")
       .map(row => Event(
         row.getAs[String]("ride_id"),
         row.getAs[Timestamp]("timestamp"),
@@ -68,7 +69,7 @@ class TaxiStructuredOperations extends java.io.Serializable {
                 eventTimestamps.max)
             }
             state.update(updatedSession)
-            state.setTimeoutDuration("30 seconds")
+            state.setTimeoutDuration("45 seconds")
 
             SessionUpdate(
               sessionId,
