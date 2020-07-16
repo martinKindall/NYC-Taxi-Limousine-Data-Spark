@@ -10,4 +10,5 @@ object TaxiStruct {
     .add("longitude", FloatType, nullable = true)
     .add("meter_increment", FloatType, nullable = true)
     .add("timestamp", TimestampType, nullable = true)
+    .add("ride_status", StringType, nullable = true)
 }

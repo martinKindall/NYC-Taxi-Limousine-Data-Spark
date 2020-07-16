@@ -26,10 +26,18 @@ class KafkaStructuredStreaming(taxiStruct: StructType, taxiOperations: TaxiStruc
           col("value").cast("string"),
           taxiStruct).alias("taxi_ride")
       ).select("taxi_ride.*")
-      
+
+    /*
     val finalQuery = taxiOperations.toSumIncrementsEventTime(sparkCtx, query)
       .toJSON
       .toDF("value")
+      .writeStream
+      .outputMode("update")
+      .format("console")
+      .start()
+     */
+
+    val finalQuery = taxiOperations.toSessionWindowPerRide(sparkCtx, query)
       .writeStream
       .outputMode("update")
       .format("console")

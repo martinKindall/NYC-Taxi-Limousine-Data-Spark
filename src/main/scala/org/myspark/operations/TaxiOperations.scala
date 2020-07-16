@@ -1,8 +1,5 @@
 package org.myspark.operations
 
-import java.sql.Timestamp
-
-import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.Seconds
@@ -12,49 +9,6 @@ import org.myspark.dataTypes.TaxiRide
 
 @SerialVersionUID(6529685098267757690L)
 class TaxiOperations(taxiStruct: StructType) extends java.io.Serializable {
-
-  def parseDStreamTaxiSessionWindows(sparkCtx: SparkSession, dsTaxiStream: DStream[TaxiRide]): Unit = {
-    import sparkCtx.implicits._
-
-    dsTaxiStream
-      .map(taxiData => {
-        Event(taxiData.rideId, Timestamp.valueOf(taxiData.timestamp), taxiData.rideStatus)
-      })
-      .foreachRDD(rdd => {
-        val streamUpdates =
-          rdd
-          .toDF()
-          .groupByKey(row => row.getAs[String]("sessionId"))
-          .mapGroupsWithState[SessionInfo, SessionUpdate](GroupStateTimeout.ProcessingTimeTimeout) {
-            case (sessionId: String, events: Iterator[Event], state: GroupState[SessionInfo]) =>
-              if (state.hasTimedOut) {
-                SessionUpdate(
-                  sessionId,
-                  0.0f,
-                  0.0f,
-                  Timestamp.valueOf("2020-10-10 20:00:00"),
-                  30L,
-                  expired = true
-                )
-              } else {
-                SessionUpdate(
-                  sessionId,
-                  0.0f,
-                  0.0f,
-                  Timestamp.valueOf("2020-10-10 20:00:00"),
-                  30L,
-                  expired = false
-                )
-              }
-          }
-
-        streamUpdates
-          .writeStream
-          .outputMode("update")
-          .format("console")
-          .start()
-      })
-  }
 
   def parseDStreamTaxiSumIncrements(dsTaxiStream: DStream[TaxiRide]): DStream[String] = {
     dsTaxiStream
@@ -100,21 +54,3 @@ class TaxiOperations(taxiStruct: StructType) extends java.io.Serializable {
     (Math.floor(coordinate / PRECISION).toFloat * PRECISION * 10000 + 25f) / 10000f
   }
 }
-
-case class Event(sessionId: String, timestamp: Timestamp, rideStatus: String)
-
-case class SessionInfo(
-                  latitude: Float,
-                  longitude: Float,
-                  startTimestamp: Timestamp,
-                  endTimestamp: Timestamp) {
-  def durationMs: Long = endTimestamp.getTime - startTimestamp.getTime
-}
-
-case class SessionUpdate(
-                  sessionId: String,
-                  latitude: Float,
-                  longitude: Float,
-                  startTimestamp: Timestamp,
-                  durationMs: Long,
-                  expired: Boolean)
