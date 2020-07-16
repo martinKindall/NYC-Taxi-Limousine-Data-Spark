@@ -16,7 +16,7 @@ class TaxiStructuredOperations extends java.io.Serializable {
       .groupBy(
         window($"timestamp", "60 seconds", "10 seconds")
       )
-      .sum("meter_increment").alias("total_money")
+      .sum("meter_increment")
   }
 
   def toSessionWindowPerRide(sparkCtx: SparkSession, query: Dataset[Row]): Dataset[SessionUpdate] = {
