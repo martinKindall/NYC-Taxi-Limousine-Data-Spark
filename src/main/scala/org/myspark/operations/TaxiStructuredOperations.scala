@@ -48,23 +48,16 @@ class TaxiStructuredOperations {
 
             val updatedSession = if (state.exists) {
               val oldSession = state.get
-              val startLatLong = if (eventStartingLatLong.isEmpty) {
-                (state.get.latitude, state.get.longitude)
-              } else {
-                eventStartingLatLong.get
-              }
+              val startLatLong = getStartPickUpOrMaintainPrevState(state, eventStartingLatLong)
+              
               SessionInfo(
                 startLatLong._1,
                 startLatLong._2,
                 oldSession.startTimestampMs,
                 math.max(oldSession.endTimestampMs, eventTimestamps.max))
             } else {
-              val startLatLong = if (eventStartingLatLong.isEmpty) {
-                events.toList.map(event => (event.latitude, event.longitude)).head
-              } else {
-                eventStartingLatLong.get
-              }
-              
+              val startLatLong = getStartPickUpOrGetFirstEventLocation(events, eventStartingLatLong)
+
               SessionInfo(
                 startLatLong._1,
                 startLatLong._2,
@@ -78,8 +71,8 @@ class TaxiStructuredOperations {
               sessionId,
               state.get.latitude,
               state.get.longitude,
-              30L,
-              30L,
+              state.get.startTimestampMs,
+              state.get.durationMs,
               expired = false
             )
           }
@@ -90,6 +83,26 @@ class TaxiStructuredOperations {
     events.find(event => event.rideStatus == "pickup").map(event => {
       (event.latitude, event.longitude)
     })
+  }
+
+  private def getStartPickUpOrMaintainPrevState(state: GroupState[SessionInfo],
+                                                 eventStartingLatLong: Option[(Float, Float)]
+                                               ): (Float, Float) = {
+    if (eventStartingLatLong.isEmpty) {
+      (state.get.latitude, state.get.longitude)
+    } else {
+      eventStartingLatLong.get
+    }
+  }
+
+  private def getStartPickUpOrGetFirstEventLocation(events: Iterator[Event],
+                                                    eventStartingLatLong: Option[(Float, Float)]
+                                                   ): (Float, Float) = {
+    if (eventStartingLatLong.isEmpty) {
+      events.toList.map(event => (event.latitude, event.longitude)).head
+    } else {
+      eventStartingLatLong.get
+    }
   }
 }
 
