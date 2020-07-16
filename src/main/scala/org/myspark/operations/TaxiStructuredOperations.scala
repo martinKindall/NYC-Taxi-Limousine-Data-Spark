@@ -44,17 +44,40 @@ class TaxiStructuredOperations {
             finalUpdate
           } else {
             val eventTimestamps = events.map(_.timestamp.getTime).toSeq
-            val eventStartingLatLong: (Float, Float) = getStartingLatLong(events)
-            val updatedSession = if (state.exists) {
+            val eventStartingLatLong: Option[(Float, Float)] = getPickupLatLong(events)
 
+            val updatedSession = if (state.exists) {
+              val oldSession = state.get
+              val startLatLong = if (eventStartingLatLong.isEmpty) {
+                (state.get.latitude, state.get.longitude)
+              } else {
+                eventStartingLatLong.get
+              }
+              SessionInfo(
+                startLatLong._1,
+                startLatLong._2,
+                oldSession.startTimestampMs,
+                math.max(oldSession.endTimestampMs, eventTimestamps.max))
             } else {
-              SessionInfo(eventStartingLatLong._1, eventStartingLatLong._2, eventTimestamps.min, eventTimestamps.max)
+              val startLatLong = if (eventStartingLatLong.isEmpty) {
+                events.toList.map(event => (event.latitude, event.longitude)).head
+              } else {
+                eventStartingLatLong.get
+              }
+              
+              SessionInfo(
+                startLatLong._1,
+                startLatLong._2,
+                eventTimestamps.min,
+                eventTimestamps.max)
             }
+            state.update(updatedSession)
+            state.setTimeoutDuration("30 seconds")
 
             SessionUpdate(
               sessionId,
-              0.0f,
-              0.0f,
+              state.get.latitude,
+              state.get.longitude,
               30L,
               30L,
               expired = false
@@ -63,17 +86,10 @@ class TaxiStructuredOperations {
       }
   }
 
-  private def getStartingLatLong(events: Iterator[Event]): (Float, Float) = {
-    val ridePickUpEvent = events.find(event => event.rideStatus == "pickup")
-    val eventToLatLongPair = (firstEvent: Event) => {
-      (firstEvent.latitude, firstEvent.longitude)
-    }
-
-    if (ridePickUpEvent.isEmpty) {
-      eventToLatLongPair(events.toList.head)
-    } else {
-      eventToLatLongPair(ridePickUpEvent.get)
-    }
+  private def getPickupLatLong(events: Iterator[Event]): Option[(Float, Float)] = {
+    events.find(event => event.rideStatus == "pickup").map(event => {
+      (event.latitude, event.longitude)
+    })
   }
 }
 
